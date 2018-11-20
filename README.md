@@ -3,9 +3,9 @@ Image crawler
 
 ## Requirements
 
-* Crawl url for all product content
+* Crawl url for images
 * Actual images should not be downloaded, store all image urls including full size and thumbnails, remove any duplicate images
-* Sets of images should kept together
+* Sets of images should be kept together
 * URLs should be stored in a general location, there should be no duplicates
 * Needs to scale across distributed hosts
 
@@ -17,7 +17,7 @@ URLs are collected and persisted such that multiple runs of the tool does not ca
 
 This essentially stores all the URLs and sub-URLs found by the crawler, this should be persisted over time so if this tool is run multiple times, state persists.  Lookups to see if this URL has been accessed already should be fast.  The schema for this store should be simple, basically store the URL and whether or not it has been crawled.     
 
-`url, crawled, tags`
+`url, state, meta, tags, timestamp`
 
 ### Image URLs
 

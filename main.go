@@ -15,14 +15,18 @@ const (
 
 var (
 
-	conf				= flag.String("conf", "config.json", "configuration file")
-	redisAddr   = flag.String("redis", ":6379", "redis server")
-	query    		= flag.String("query", "", "query parameter")
+	conf				= flag.String("conf", "config.json", "Configuration file")
+	depth       = flag.Int("depth", 1, "Number of pages to crawl")
+	mem         = flag.Bool("mem", false, "Utilize memory instead of Redis to store URLs")
+	query    		= flag.String("query", "", "Query parameter")
+	redisAddr   = flag.String("redis", ":6379", "Redis server")
 	
 )
 
 var cnx redis.Conn
-var m = make(map[string] bool)
+
+var m map[string] CrawldPage
+var g map[string] CrawldImage
 
 
 func appLog(msg string, fname string) {
@@ -50,25 +54,43 @@ func main() {
 
 	flag.Parse()
 
-	//log.Printf("Initiating connection to redis at address %s", *redisAddr)
+	if *mem {
 
-	//initRedis()
+		m = make(map[string] CrawldPage)
+		g = make(map[string] CrawldImage)
 
-	//defer cnx.Close()
+	} else {
 
-	if *query == "" {
-		log.Fatal("Please add location to crawl with the -page option")
+		appLog(fmt.Sprintf(
+			"Initiating connection to Redis at address %s", *redisAddr),
+			"main")
+
+		initRedis()
+	
+		defer cnx.Close()
+	
 	}
 
-	p := 20
+	if *query == "" {
+		log.Fatal("Please add a query to crawl with the -query option")
+	}
 
-	for i := 0; i < p; i++ {
+	for i := 1; i <= *depth; i++ {
 
 		crawler(fmt.Sprintf(SRC_JDCOM, *query, *query, i))
 
 	}
 
-	log.Println(m)
+	//log.Println(m)
 	log.Println(len(m))
+	log.Println(*depth)
+
+	for _, k := range m {
+		getImageList(k.Referral)
+		break
+	}
+
+	log.Println(len(g))
+	log.Println(g)
 
 } // main

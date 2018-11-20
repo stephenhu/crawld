@@ -4,15 +4,9 @@ import (
 	//"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
-)
-
-const (
-	HTML_A          = "a"
-	HTML_IMG        = "img"
-	ATTR_HREF 			= "href"
-	ATTR_SRC        = "src"
 )
 
 func crawler(link string) {
@@ -34,16 +28,29 @@ func crawler(link string) {
 			doc.Find(HTML_A).Each(func(index int, item *goquery.Selection) {
 
 				l, _ := item.Attr(ATTR_HREF)
-
+				
 				if strings.Contains(l, LNK_JDCOM) || strings.Contains(l, LNK_JDCOM_CCC_X) {
-					//log.Println(l)
 					
 					s := strings.TrimSuffix(l, "#comment")
-
+					
 					_, ok := m[s]
 
 					if !ok {
-						m[s] = false
+						
+						lnk := s
+
+						if strings.HasPrefix(s, "//") {
+
+							lnk = "http:" + s
+
+						}
+
+						m[s] = CrawldPage{
+							Referral: lnk,
+							Created: time.Now(),
+							State: STATE_OPEN,
+						}
+
 					}
 
 				}
