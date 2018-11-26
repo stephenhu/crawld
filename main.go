@@ -62,7 +62,7 @@ func main() {
 	} else {
 
 		appLog(fmt.Sprintf(
-			"Initiating connection to Redis at address %s", *redisAddr),
+			"Initiating connection to Redis at %s", *redisAddr),
 			"main")
 
 		initRedis()
@@ -72,7 +72,7 @@ func main() {
 	}
 
 	if *query == "" {
-		log.Fatal("Please add a query to crawl with the -query option")
+		log.Fatal("Please add a query for crawld with the -query option")
 	}
 
 	for i := 1; i <= *depth; i++ {
@@ -87,10 +87,10 @@ func main() {
 
 	for _, k := range m {
 		getImageList(k.Referral)
-		break
 	}
 
 	log.Println(len(g))
-	log.Println(g)
+	
+	generateHtml()
 
 } // main
