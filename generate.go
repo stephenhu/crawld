@@ -4,7 +4,7 @@ import (
 	"html/template"
 	"os"
 
-	"github.com/stephenhu/go-nude"
+	"gocv.io/x/gocv"
 )
 
 
@@ -16,15 +16,27 @@ func generateHtml() {
 
 	for k, _ := range g {
 
-		isNude, err := nude.IsURLNude("http:" + k)
+		img := gocv.IMRead("http:" + k, gocv.IMReadColor)
 
-		if err != nil {
+		if img.Empty() {
 			appLog(err.Error(), "generateHtml")
 		} else {
 
-			if isNude {
-				links = append(links, "http:" + k)
-			}
+			hsv := gocv.NewMat()
+
+			gocv.CvtColor(img, &hsv, gocv.ColorBGRToHSV)
+
+			lower := gocv.NewMatFromScalar(gocv.NewScalar.(0.0, 48.0, 80.0, 0.0), gocv.MatTypeCV8UC3)
+			upper := gocv.NewMatFromScalar(gocv.NewScalar.(20.0, 255.0, 255.0, 0.0), gocv.MatTypeCV8UC3)
+			
+			mask := gocv.NewMat()
+
+			skin := gocv.InRange(hsv, lower, upper, &mask)
+
+			log.Println(skin)
+
+			//links = append(links, "http:" + k)
+
 
 		}
 
