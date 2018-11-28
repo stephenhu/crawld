@@ -29,50 +29,50 @@ func generateHtml() {
 		res, err := http.Get(u)
 
 		if err != nil {
-                  appLog(err.Error(), "generateHtml")
+      appLog(err.Error(), "generateHtml")
 		} else {
 
-                buf := new(bytes.Buffer)
-		buf.ReadFrom(res.Body)
-
-		defer res.Body.Close()
-
-		img, err := gocv.IMDecode(buf.Bytes(), gocv.IMReadColor)
-
-		if err != nil {
-			appLog(err.Error(), "generateHtml")
-		} else if img.Empty() {
-		        appLog("Unable to get image, skipping", "generateHtml")	
-		} else {
-
-			hsv := gocv.NewMat()
-
-			gocv.CvtColor(img, &hsv, gocv.ColorBGRToHSV)
-
-			lower := gocv.NewMatFromScalar(gocv.NewScalar(0.0, 48.0, 80.0, 0.0), gocv.MatTypeCV8UC3)
-			upper := gocv.NewMatFromScalar(gocv.NewScalar(20.0, 255.0, 255.0, 0.0), gocv.MatTypeCV8UC3)
+			buf := new(bytes.Buffer)
 			
-			mask := gocv.NewMat()
+		  buf.ReadFrom(res.Body)
 
-			gocv.InRange(hsv, lower, upper, &mask)
+			defer res.Body.Close()
 
-			count := gocv.CountNonZero(mask)
+			img, err := gocv.IMDecode(buf.Bytes(), gocv.IMReadColor)
 
-			//log.Println(k)
-			
-			//log.Println(gocv.CountNonZero(mask))
-			//log.Println(mask.Total())
+			if err != nil {
+				appLog(err.Error(), "generateHtml")
+			} else if img.Empty() {
+							appLog("Unable to get image, skipping", "generateHtml")	
+			} else {
+
+				hsv := gocv.NewMat()
+
+				gocv.CvtColor(img, &hsv, gocv.ColorBGRToHSV)
+
+				lower := gocv.NewMatFromScalar(gocv.NewScalar(0.0, 48.0, 80.0, 0.0), gocv.MatTypeCV8UC3)
+				upper := gocv.NewMatFromScalar(gocv.NewScalar(20.0, 255.0, 255.0, 0.0), gocv.MatTypeCV8UC3)
+				
+				mask := gocv.NewMat()
+
+				gocv.InRange(hsv, lower, upper, &mask)
+
+				count := gocv.CountNonZero(mask)
+
+				//log.Println(k)
+				
+				//log.Println(gocv.CountNonZero(mask))
+				//log.Println(mask.Total())
 
 
-			if count > 0 {
-				links = append(links, u)
+				if count > 0 {
+					links = append(links, u)
+				}
+				//links = append(links, "http:" + k)
+
 			}
-			//links = append(links, "http:" + k)
-
 
 		}
-
-	}
 
 	}
 
