@@ -3,13 +3,13 @@ package main
 import (
     "bytes"
     "html/template"
-    "image"
-    "log"
+    //"image"
+    //"log"
     "net/http"
     "os"
     "strings"
 
-    "gocv.io/x/gocv"
+    //"gocv.io/x/gocv"
 )
 
 
@@ -38,7 +38,7 @@ func generateHtml() {
             buf.ReadFrom(res.Body)
 
             defer res.Body.Close()
-
+/*
             img, err := gocv.IMDecode(buf.Bytes(), gocv.IMReadColor)
 
             if err != nil {
@@ -60,15 +60,7 @@ func generateHtml() {
 
                 kernel := gocv.GetStructuringElement(gocv.MorphEllipse, image.Point{11, 11})
 
-                eroded := gocv.NewMat()
-
-                defer eroded.Close()
-
                 gocv.Erode(mask, &mask, kernel)
-
-                dilated := gocv.NewMat()
-
-                defer dilated.Close()
 
                 gocv.Dilate(mask, &mask, kernel)
 
@@ -88,14 +80,16 @@ func generateHtml() {
 
                 if count > 0 {
                     links = append(links, u)
-                }
-                //links = append(links, "http:" + k)
+                 }
+
+*/
+                links = append(links, u)
 
             }
 
         }
 
-    }
+    //}
 
     f, err := os.Create("bmodel.html")
 

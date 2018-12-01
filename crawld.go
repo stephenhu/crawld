@@ -47,6 +47,23 @@ const (
 
 )
 
+
+type ServiceConfig struct {
+	Host				string							`json:"host"`
+	Port				string							`json:"port"`
+	User				string							`json:"user"`
+	Password		string							`json:"password"`
+	Meta        map[string] string	`json:"meta"`
+}
+
+type CrawldConfig struct {
+	Depth			int								`json:"depth"`
+	Mem       bool              `json:"mem"`
+	Queries   []string          `json:"queries"`
+	Redis     ServiceConfig			`json:"redis"`
+	RabbitMQ  ServiceConfig			`json:"rabbitmq"`
+}
+
 type CrawldPage struct {
 	Referral			string								`json:"referral"`
 	Meta          map[string]string			`json:"meta"`

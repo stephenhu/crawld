@@ -9,6 +9,22 @@ Image crawler
 * URLs should be stored without duplicates
 * Needs to scale across distributed hosts
 
+## Setup
+
+1.  `go get github.com/streadway/amqp`
+1.  `go get github.com/PuerkitoBio/goquery`
+1.  `go get gocv.io/x/gocv`
+1.  `go get golang.org/x/net/html`
+1.  `go get github.com/gomodule/redigo/redis`
+
+`go build`
+
+## Usage
+
+`./crawd`
+
+`Command line flags override crawld.json`
+
 ## Design
 
 There are 3 sets of URLs tracked:

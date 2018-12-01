@@ -1,51 +1,182 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net"
+	"os"
 	
 	"github.com/gomodule/redigo/redis"
+	"github.com/streadway/amqp"
 )
 
 const (
 	APP_NAME				= "crawld"
 	VERSION         = "0.1"
+	PRODUCTS        = "crawld.products"
 )
 
 var (
 
-	conf				= flag.String("conf", "config.json", "Configuration file")
-	depth       = flag.Int("depth", 1, "Number of pages to crawl")
-	mem         = flag.Bool("mem", false, "Utilize memory instead of Redis to store URLs")
-	query    		= flag.String("query", "", "Query parameter")
-	redisAddr   = flag.String("redis", ":6379", "Redis server")
+	conf					= flag.String("conf", "crawld.json", "Configuration file")
+	depth       	= flag.Int("depth", 1, "Number of pages to crawl")
+	mem         	= flag.Bool("mem", false, "Utilize memory instead of Redis to store URLs")
+	query    			= flag.String("query", "", "Query parameter")
+	redisAddr   	= flag.String("redis", "", "Redis server")
+	rabbitMQAddr  = flag.String("rabbitmq", "", "Rabbitmq server")
 	
 )
 
-var cnx redis.Conn
+var rediss 				redis.Conn
+var rabbits 			*amqp.Connection
+var productsch    *amqp.Channel
+var productsq     amqp.Queue
+
+var config = CrawldConfig{}
 
 var m map[string] CrawldPage
 var g map[string] CrawldImage
 
 
+func redisStr() string {
+  return fmt.Sprintf("%s:%s", config.Redis.Host, config.Redis.Port)
+} // redisStr
+
+
+func rabbitMQStr() string {
+  return fmt.Sprintf("amqp://%s:%s@%s:%s/%s", config.RabbitMQ.User,
+		config.RabbitMQ.Password, config.RabbitMQ.Host, config.RabbitMQ.Port,
+	  config.RabbitMQ.Meta["vhost"])
+} // rabbitMQStr
+
+	
+func normalizeConfig() {
+
+	if *redisAddr != "" {
+		
+		host, port, err := net.SplitHostPort(*redisAddr)
+
+		if err != nil {
+			appLog(err.Error(), "normalizeConfig")
+		} else {
+
+			config.Redis.Host = host
+			config.Redis.Port = port
+
+		}
+
+	}
+
+	if *rabbitMQAddr != "" {
+		
+		host, port, err := net.SplitHostPort(*rabbitMQAddr)
+
+		if err != nil {
+			appLog(err.Error(), "normalizeConfig")
+		} else {
+
+			config.RabbitMQ.Host = host
+			config.RabbitMQ.Port = port
+
+		}
+
+	}
+
+	if *query != "" {
+		config.Queries = append(config.Queries, *query)
+	}
+
+
+} // normalizeConfig
+
+
+func parseConfig() {
+
+	_, err := os.Stat(*conf)
+	
+	if err != nil || os.IsNotExist(err) {
+		appLog(err.Error(), "parseConfig")
+	} else {
+
+		buf, err := ioutil.ReadFile(*conf)
+
+		if err != nil {
+			appLog(err.Error(), "parseConfig")
+		} else {
+
+			err := json.Unmarshal(buf, &config)
+
+			if err != nil {
+				appLog(err.Error(), "parseConfig")
+			}
+
+			normalizeConfig()
+
+		}
+
+	}
+
+} // parseConfig
+
+
 func appLog(msg string, fname string) {
-	log.Printf("%s v%s: %s(): %s", APP_NAME, VERSION, fname, msg)
+	log.Printf("[%s v%s] %s(): %s", APP_NAME, VERSION, fname, msg)
 } // appLog
+
+
+func initRabbitMQ() {
+
+	c, err := amqp.Dial(rabbitMQStr())
+
+	if err != nil {
+		appLog(err.Error(), "initRabbitMQ")
+		log.Println(rabbitMQStr())
+		log.Fatal("Unable to connect to RabbitMQ")
+	} else {
+
+		ch, err := c.Channel()
+
+		if err != nil {
+			appLog(err.Error(), "initRabbitMQ")
+			log.Fatal("Unable to connect to RabbitMQ channel")
+		} else {
+
+			q, err := ch.QueueDeclare(
+				PRODUCTS, true, false, false, false, nil,
+			)
+
+			if err != nil {
+				appLog(err.Error(), "initRabbitMQ")
+				log.Fatal("Unable to declare a queue in RabbitMQ")
+			}
+
+			productsq 	= q
+			productsch 	= ch
+
+		}
+
+	}
+
+	rabbits 		= c
+
+} // initRabbitMQ
 
 
 func initRedis() {
 
-	c, err := redis.Dial("tcp", *redisAddr)
+	c, err := redis.Dial("tcp", redisStr())
 
 	if err != nil {
 
 		appLog(err.Error(), "initRedis")
-		log.Fatal("No redis connection found")
+		log.Fatal("Unable to connect to Redis")
 	
 	}
 
-	cnx = c
+	rediss = c
 
 } // initRedis
 
@@ -54,6 +185,8 @@ func main() {
 
 	flag.Parse()
 
+	parseConfig()
+
 	if *mem {
 
 		m = make(map[string] CrawldPage)
@@ -61,23 +194,28 @@ func main() {
 
 	} else {
 
-		appLog(fmt.Sprintf(
-			"Initiating connection to Redis at %s", *redisAddr),
-			"main")
+		appLog(fmt.Sprintf("Initiating connection to Redis at %s",
+		  redisStr()), "main")
 
 		initRedis()
 	
-		defer cnx.Close()
+		defer rediss.Close()
 	
 	}
 
-	if *query == "" {
+	initRabbitMQ()
+
+	defer rabbits.Close()
+
+	defer productsch.Close()
+
+	if len(config.Queries) == 0 {
 		log.Fatal("Please add a query for crawld with the -query option")
 	}
 
 	for i := 1; i <= *depth; i++ {
 
-		crawler(fmt.Sprintf(SRC_JDCOM, *query, *query, i))
+		crawler(fmt.Sprintf(SRC_JDCOM, config.Queries[0], config.Queries[0], i))
 
 	}
 
