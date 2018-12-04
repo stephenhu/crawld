@@ -15,7 +15,9 @@ import (
 
 func storeImageList(link string) {
 
-	res, err := http.Get("http://" + link)
+	l := SanitizeURL(link)
+
+	res, err := http.Get(l)
 
 	if err != nil {
 		appLog(err.Error(), "storeImageList")
@@ -49,11 +51,20 @@ func storeImageList(link string) {
 
 						if string(k) == ATTR_DATA_LAZYLOAD {
 							
+							/*
 							g[string(v)] = CrawldImage {
-								Referral: strings.TrimPrefix(link, "//"),
+								Referral: l,
 								Created: time.Now(),
 								Valid: true,
 							}
+							*/
+
+							imageStore.Put(string(v),
+						    CrawldEntity{
+									Referral: l,
+									Created: time.Now(),
+									Valid: true,
+								})
 
 						}
 

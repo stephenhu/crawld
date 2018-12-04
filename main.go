@@ -37,8 +37,8 @@ var productsq     amqp.Queue
 
 var config = CrawldConfig{}
 
-var m map[string] CrawldPage
-var g map[string] CrawldImage
+var productStore 		Store
+var imageStore 			Store
 
 
 func redisStr() string {
@@ -88,6 +88,8 @@ func normalizeConfig() {
 	if *query != "" {
 		config.Queries = append(config.Queries, *query)
 	}
+
+
 
 
 } // normalizeConfig
@@ -189,13 +191,21 @@ func main() {
 
 	if *mem {
 
-		m = make(map[string] CrawldPage)
-		g = make(map[string] CrawldImage)
+		productStore 		= MemStore{
+			Entities: make(map[string]CrawldEntity),
+		}
+
+		imageStore			= MemStore{
+			Entities: make(map[string]CrawldEntity),
+		}
 
 	} else {
 
 		appLog(fmt.Sprintf("Initiating connection to Redis at %s",
 		  redisStr()), "main")
+
+		productStore 		= RedisStore{}
+		imageStore			= RedisStore{}
 
 		initRedis()
 	
@@ -213,22 +223,26 @@ func main() {
 		log.Fatal("Please add a query for crawld with the -query option")
 	}
 
-	for i := 1; i <= *depth; i++ {
+	for i := 0; i < len(config.Queries); i++ {
 
-		crawler(fmt.Sprintf(SRC_JDCOM, config.Queries[0], config.Queries[0], i))
+		for j := 1; j <= *depth; j++ {
+			crawler(fmt.Sprintf(SRC_JDCOM, config.Queries[i], config.Queries[i], j))
+		}
 
 	}
 
 	//log.Println(m)
-	log.Println(len(m))
-	log.Println(*depth)
+	//log.Println(len(m))
+	//log.Println(*depth)
 
+	/*
 	for _, k := range m {
 		getImageList(k.Referral)
 	}
 
-	log.Println(len(g))
+	//log.Println(len(g))
 	
 	generateHtml()
-
+	*/
+	
 } // main

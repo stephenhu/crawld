@@ -11,7 +11,9 @@ import (
 
 func crawler(link string) {
 
-	res, err := http.Get(link)
+	lnk := SanitizeURL(link)
+
+	res, err := http.Get(lnk)
 
 	if err != nil {
 		appLog(err.Error(), "crawler")
@@ -31,27 +33,27 @@ func crawler(link string) {
 				
 				if strings.Contains(l, LNK_JDCOM) || strings.Contains(l, LNK_JDCOM_CCC_X) {
 					
-					s := strings.TrimSuffix(l, "#comment")
+					s := strings.TrimSuffix(lnk, "#comment")
 					
+					productStore.Put(s,
+					  CrawldEntity{
+							Created: time.Now(),
+							State: STATE_OPEN,
+						})
+					/*
 					_, ok := m[s]
 
 					if !ok {
-						
-						lnk := s
 
-						if strings.HasPrefix(s, "//") {
-
-							lnk = "http:" + s
-
-						}
-
-						m[s] = CrawldPage{
-							Referral: lnk,
+						m[s] = CrawldEntity{
+							Referral: SanitizeURL(s),
 							Created: time.Now(),
 							State: STATE_OPEN,
 						}
 
 					}
+
+					*/
 
 				}
 

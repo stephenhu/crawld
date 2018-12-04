@@ -58,24 +58,16 @@ type ServiceConfig struct {
 
 type CrawldConfig struct {
 	Depth			int								`json:"depth"`
-	Mem       bool              `json:"mem"`
 	Queries   []string          `json:"queries"`
 	Redis     ServiceConfig			`json:"redis"`
 	RabbitMQ  ServiceConfig			`json:"rabbitmq"`
 }
 
-type CrawldPage struct {
+type CrawldEntity struct {
 	Referral			string								`json:"referral"`
 	Meta          map[string]string			`json:"meta"`
 	Created     	time.Time      				`json:"created"`
 	State         int                   `json:"state"`
-	Tags          []string              `json:"tags"`
-}
-
-type CrawldImage struct {
-	Referral			string								`json:"referral"`
-	Meta          map[string]string			`json:"meta"`
-	Created     	time.Time      				`json:"created"`
 	Valid         bool                  `json:"valid"`
 	Tags          []string              `json:"tags"`
 	Rating        int                   `json:"rating"`
