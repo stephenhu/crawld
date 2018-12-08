@@ -1,18 +1,20 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"time"
-	
-	//"github.com/gomodule/redigo/redis"
+		
 	"github.com/go-redis/redis"
-	//"github.com/streadway/amqp"
+	"github.com/gorilla/mux"
+	_ "github.com/golang-migrate/migrate/database/sqlite3"
 )
 
 const (
@@ -23,36 +25,24 @@ const (
 var (
 
 	conf					= flag.String("conf", "crawld.json", "Configuration file")
+	databaseAddr  = flag.String("database", "./db/crawld.db", "Database address")
 	depth       	= flag.Int("depth", 1, "Number of pages to crawl")
-	mem         	= flag.Bool("mem", false, "Utilize memory instead of Redis to store URLs")
 	query    			= flag.String("query", "", "Query parameter")
 	redisAddr   	= flag.String("redis", "", "Redis server")
-	//rabbitMQAddr  = flag.String("rabbitmq", "", "Rabbitmq server")
+	serverAddr    = flag.String("server", ":8883", "Server address")
 	
 )
 
-var rediss 				*redis.Client
-//var rabbits 			*amqp.Connection
-//var productsch    *amqp.Channel
-//var productsq     amqp.Queue
+var rediss 		*redis.Client 	= nil
+var data      *sql.DB 				= nil
 
-var config = CrawldConfig{}
-
-var productStore 		Store
-var imageStore 			Store
+var config 		= CrawldConfig{}
 
 
 func redisStr() string {
   return fmt.Sprintf("%s:%s", config.Redis.Host, config.Redis.Port)
 } // redisStr
 
-/*
-func rabbitMQStr() string {
-  return fmt.Sprintf("amqp://%s:%s@%s:%s/%s", config.RabbitMQ.User,
-		config.RabbitMQ.Password, config.RabbitMQ.Host, config.RabbitMQ.Port,
-	  config.RabbitMQ.Meta["vhost"])
-} // rabbitMQStr
-*/
 	
 func normalizeConfig() {
 
@@ -61,7 +51,7 @@ func normalizeConfig() {
 		host, port, err := net.SplitHostPort(*redisAddr)
 
 		if err != nil {
-			appLog(err.Error(), "normalizeConfig")
+			appLogError(err, "normalizeConfig")
 		} else {
 
 			config.Redis.Host = host
@@ -103,19 +93,19 @@ func parseConfig() {
 	_, err := os.Stat(*conf)
 	
 	if err != nil || os.IsNotExist(err) {
-		appLog(err.Error(), "parseConfig")
+		appLogError(err, "parseConfig")
 	} else {
 
 		buf, err := ioutil.ReadFile(*conf)
 
 		if err != nil {
-			appLog(err.Error(), "parseConfig")
+			appLogError(err, "parseConfig")
 		} else {
 
 			err := json.Unmarshal(buf, &config)
 
 			if err != nil {
-				appLog(err.Error(), "parseConfig")
+				appLogError(err, "parseConfig")
 			}
 
 			normalizeConfig()
@@ -127,48 +117,15 @@ func parseConfig() {
 } // parseConfig
 
 
-func appLog(msg string, fname string) {
-	log.Printf("[%s v%s] %s(): %s", APP_NAME, VERSION, fname, msg)
-} // appLog
+func appLogError(err error, fname string) {
+	log.Printf("[%s v%s] %s(): %s", APP_NAME, VERSION, fname, err.Error())
+} // appLogError
 
-/*
-func initRabbitMQ() {
 
-	c, err := amqp.Dial(rabbitMQStr())
+func appLogInfo(msg string) {
+	log.Printf("[%s v%s] %s", APP_NAME, VERSION, msg)
+} // appLogInfo
 
-	if err != nil {
-		appLog(err.Error(), "initRabbitMQ")
-		log.Println(rabbitMQStr())
-		log.Fatal("Unable to connect to RabbitMQ")
-	} else {
-
-		ch, err := c.Channel()
-
-		if err != nil {
-			appLog(err.Error(), "initRabbitMQ")
-			log.Fatal("Unable to connect to RabbitMQ channel")
-		} else {
-
-			q, err := ch.QueueDeclare(
-				PRODUCTS, true, false, false, false, nil,
-			)
-
-			if err != nil {
-				appLog(err.Error(), "initRabbitMQ")
-				log.Fatal("Unable to declare a queue in RabbitMQ")
-			}
-
-			productsq 	= q
-			productsch 	= ch
-
-		}
-
-	}
-
-	rabbits 		= c
-
-} // initRabbitMQ
-*/
 
 func initRedis() {
 
@@ -185,85 +142,70 @@ func initRedis() {
 
 	if err != nil {
 
-		appLog(err.Error(), "initRedis")
+		appLogError(err, "initRedis")
 		log.Fatal("Unable to connect to Redis")
 	
 	}
 
 	rediss = c
 
+	appLogInfo(fmt.Sprintf("Redis connection established at %s", redisStr()))
+
 } // initRedis
 
 
-func main() {
+func initDatabase() {
 
+	_, err := os.Stat(*databaseAddr)
+
+	if err != nil || os.IsNotExist(err) {
+		appLogError(err, "connectDatabase")
+		log.Fatal("Database not found, please initialize database.")
+	} else {
+
+		db, err := sql.Open("sqlite3", *databaseAddr)
+
+		if err != nil {
+			appLogError(err, "connectDatabase")
+		}
+
+		data = db
+
+		appLogInfo(fmt.Sprintf("Database connection established at %s", *databaseAddr))
+
+	}
+
+} // initDatabase
+
+
+func initRoutes() *mux.Router {
+
+	router := mux.NewRouter()
+
+	router.HandleFunc("/api/crawlers", crawlerAPIHandler)
+	router.HandleFunc("/api/images", imageAPIHandler)
+	router.HandleFunc("/api/models", modelAPIHandler)
+	
+	return router
+
+} // initRoutes
+
+
+func main() {
+	
 	flag.Parse()
 
 	parseConfig()
 
-	if *mem {
+	initRedis()
 
-		productStore 		= MemStore{
-			Entities: make(map[string] map[string] interface{}),
-		}
+	defer rediss.Close()
 
-		imageStore			= MemStore{
-			Entities: make(map[string] map[string] interface{}),
-		}
-
-	} else {
-
-		appLog(fmt.Sprintf("Initiating connection to Redis at %s",
-		  redisStr()), "main")
-
-		initRedis()
-
-		defer rediss.Close()
-	
-		productStore 		= RedisStore{}
-		imageStore			= RedisStore{}
-
-	
-	}
-
-	//initRabbitMQ()
-
-	//defer rabbits.Close()
-
-	//defer productsch.Close()
+	initDatabase()
 
 	go productParser()
-	
-	if len(config.Queries) == 0 {
-		log.Fatal("Please add a query for crawld with the -query option")
-	}
 
-	for i := 0; i < len(config.Queries); i++ {
-
-		for j := 1; j <= *depth; j++ {
-			crawler(fmt.Sprintf(SRC_JDCOM, config.Queries[i], config.Queries[i], j))
-		}
-
-	}
-
-	all, err := imageStore.GetAll()
-
-	if err != nil {
-		appLog(err.Error(), "main")
-	} else {
-		//log.Println(all)
-		log.Println(len(all))	
-	}
-	
-
-	/*
-	for _, k := range m {
-		getImageList(k.Referral)
-	}
-
-	//log.Println(len(g))
-	
-	generateHtml()
-	*/
+	appLogInfo(fmt.Sprintf("Listening on port %s", *serverAddr))
+	log.Fatal(http.ListenAndServe(*serverAddr, initRoutes()))
 	
 } // main

@@ -13,10 +13,10 @@ const (
 
 const (
 
-	PRODUCTS        = "crawld.products"
-	IMAGES          = "crawld.images"
-	PRODUCTQ        = "queue.product"
-	IMAGEQ          = "queue.image"
+	PRODUCTS        = "crawld.urls.products"
+	IMAGES          = "crawld.urls.images"
+	PRODUCTSQ       = "crawld.queue.products"
+	IMAGESQ         = "crawld.queue.images"
 
 )
 
@@ -34,6 +34,7 @@ const (
 
 	LNK_JDCOM 				= "item.jd.com"
 	LNK_JDCOM_CCC_X 	= "ccc-x.jd.com"
+	LNK_JDCOM_CD      = "cd.jd.com"
 
 )
 

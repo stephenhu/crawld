@@ -2,14 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"log"
+	//"log"
 	"net/http"
 	"regexp"
 	"strings"
-	"time"
+	//"time"
 
-	//"github.com/gomodule/redigo/redis"
-	//"github.com/go-redis/redis"
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html"
 )
@@ -22,7 +20,7 @@ func storeImageList(link string) {
 	res, err := http.Get(l)
 
 	if err != nil {
-		appLog(err.Error(), "storeImageList")
+		appLogError(err, "storeImageList")
 	} else {
 
 		defer res.Body.Close()
@@ -32,7 +30,7 @@ func storeImageList(link string) {
 		err := json.NewDecoder(res.Body).Decode(&j)
 
 		if err != nil {
-			appLog(err.Error(), "storeImageList")
+			appLogError(err, "storeImageList")
 		} else {
 
 			doc := html.NewTokenizer(strings.NewReader(j["content"].(string)))
@@ -52,20 +50,26 @@ func storeImageList(link string) {
 						k, v, _ := doc.TagAttr()
 
 						if string(k) == ATTR_DATA_LAZYLOAD {
-							
-							/*
-							g[string(v)] = CrawldImage {
-								Referral: l,
-								Created: time.Now(),
-								Valid: true,
-							}
-							*/
 
-							
-							imageStore.Put(SanitizeURL(string(v)),map[string] interface{}{
-								"referral": l,
-								"created": time.Now(),
-							})
+							cleanUrl := SanitizeURL(string(v))
+
+							r, err := rediss.SAdd(IMAGES, cleanUrl).Result()
+
+							if err != nil {
+								appLogError(err, "storeImageList")
+							} else {
+
+								if r > 0 {
+
+									err := rediss.LPush(IMAGESQ, cleanUrl).Err()
+
+									if err != nil {
+										appLogError(err, "storeImageList")
+									}
+
+								}
+
+							}
 
 
 						}
@@ -91,7 +95,7 @@ func getImageList(link string) {
 	res, err := http.Get(link)
 
 	if err != nil {
-		appLog(err.Error(), "getImageList")
+		appLogError(err, "getImageList")
 	} else {
 
 		defer res.Body.Close()
@@ -99,7 +103,7 @@ func getImageList(link string) {
 		doc, err := goquery.NewDocumentFromReader(res.Body)
 
 		if err != nil {
-			appLog(err.Error(), "getImageList")
+			appLogError(err, "getImageList")
 		} else {
 
 			doc.Find(HTML_SCRIPT).Each(func(index int, item *goquery.Selection) {
@@ -125,13 +129,16 @@ func getImageList(link string) {
 
 func productParser() {
 
-	r, err := rediss.BLPop(0, PRODUCTQ).Result()
+	for {
 
-	if err != nil {
-		appLog(err.Error(), "productParser")
-	} else {
-		log.Println(r)
-		getImageList(r[1])
+		r, err := rediss.LPop(PRODUCTSQ).Result()
+	
+		if err != nil {
+			//appLogError(err, "productParser")
+		} else {
+			getImageList(r)
+		}
+	
 	}
 
 } // productParser

@@ -4,7 +4,7 @@ import (
 	//"log"
 	"net/http"
 	"strings"
-	"time"
+	//"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -13,10 +13,12 @@ func crawler(link string) {
 
 	lnk := SanitizeURL(link)
 
+	appLogInfo(lnk)
+	
 	res, err := http.Get(lnk)
 
 	if err != nil {
-		appLog(err.Error(), "crawler")
+		appLogError(err, "crawler")
 	} else {
 
 		defer res.Body.Close()
@@ -24,43 +26,37 @@ func crawler(link string) {
 		doc, err := goquery.NewDocumentFromReader(res.Body)
 
 		if err != nil {
-			appLog(err.Error(), "crawler")
+			appLogError(err, "crawler")
 		} else {
 
 			doc.Find(HTML_A).Each(func(index int, item *goquery.Selection) {
 
 				l, _ := item.Attr(ATTR_HREF)
 
+				//TODO: filter all
 				if strings.Contains(l, LNK_JDCOM) || strings.Contains(l, LNK_JDCOM_CCC_X) {
 					
 					s := strings.TrimSuffix(l, "#comment")
 
 					s = SanitizeURL(s)
-					
-					if !productStore.Exists(s) {
 
-						productStore.Put(s, map[string] interface{}{
-							"created": time.Now(),
-						})
+					r, err := rediss.SAdd(PRODUCTS, s).Result()
+
+					if err != nil {
+						appLogError(err, "crawler")
+					} else {
+
+						if r > 0 {
+
+							err = rediss.LPush(PRODUCTSQ, s).Err()
 	
-						rediss.LPush(PRODUCTQ, s)
-
-					}
-
-					/*
-					_, ok := m[s]
-
-					if !ok {
-
-						m[s] = CrawldEntity{
-							Referral: SanitizeURL(s),
-							Created: time.Now(),
-							State: STATE_OPEN,
+							if err != nil {
+								appLogError(err, "crawler")
+							}
+		
 						}
-
+	
 					}
-
-					*/
 
 				}
 

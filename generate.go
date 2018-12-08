@@ -1,12 +1,12 @@
 package main
 
 import (
-    "bytes"
-    "html/template"
+    //"bytes"
+    //"html/template"
     //"image"
     //"log"
-    "net/http"
-    "os"
+    //"net/http"
+    //"os"
     //"strings"
 
     //"gocv.io/x/gocv"
@@ -14,15 +14,16 @@ import (
 
 
 func generateHtml() {
-
+/*
     t := template.Must(template.New("").Parse(`<html><body>{{range .}}<img src={{.}}></img>{{end}}</body></html>`))
     
     links := []string{}
 
+    
     all, err := imageStore.GetAll()
 
     if err != nil {
-        appLog(err.Error(), "generateHtml")
+        appLogError(err, "generateHtml")
     } else {
 
         for k, _ := range all {
@@ -30,7 +31,7 @@ func generateHtml() {
             res, err := http.Get(k)
     
             if err != nil {
-              appLog(err.Error(), "generateHtml")
+              appLogError(err, "generateHtml")
             } else {
     
                 buf := new(bytes.Buffer)
@@ -38,13 +39,13 @@ func generateHtml() {
                 buf.ReadFrom(res.Body)
     
                 defer res.Body.Close()
-    /*
+    
                 img, err := gocv.IMDecode(buf.Bytes(), gocv.IMReadColor)
     
                 if err != nil {
-                    appLog(err.Error(), "generateHtml")
+                    appLogError(err, "generateHtml")
                 } else if img.Empty() {
-                    appLog("Unable to get image, skipping", "generateHtml") 
+                    //appLogInfo("Unable to get image, skipping", "generateHtml") 
                 } else {
     
                     hsv := gocv.NewMat()
@@ -82,7 +83,7 @@ func generateHtml() {
                         links = append(links, u)
                      }
     
-    */
+    
                     links = append(links, k)
     
             }
@@ -90,13 +91,13 @@ func generateHtml() {
             f, err := os.Create("bmodel.html")
 
             if err != nil {
-                appLog(err.Error(), "generateHtml")
+                appLogError(err, "generateHtml")
             } else {
 
                 err := t.Execute(f, links)
 
                 if err != nil {
-                    appLog(err.Error(), "generateHtml")
+                    appLogError(err, "generateHtml")
                 }
             
             }
@@ -106,5 +107,5 @@ func generateHtml() {
 
     //}
     
-
+*/
 } // generateHtml
