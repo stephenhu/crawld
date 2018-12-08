@@ -7,15 +7,15 @@ import (
 
 type Store interface {
 
-	Put(s string, p CrawldEntity)						error
-	Get(s string)														(*CrawldEntity, error)
-	GetAll()																(map[string]CrawldEntity, error)
+	Put(s string, v map[string] interface{})	error
+	Get(s string)														([] interface{}, error)
+	GetAll()																(map[string] interface{}, error)
 	Exists(s string) 												bool
 
 }
 
 type MemStore struct {
-	Entities				map[string] CrawldEntity
+	Entities				map[string] map[string] interface{}
 }
 
 type RedisStore struct {

@@ -8,15 +8,16 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 	
-	"github.com/gomodule/redigo/redis"
-	"github.com/streadway/amqp"
+	//"github.com/gomodule/redigo/redis"
+	"github.com/go-redis/redis"
+	//"github.com/streadway/amqp"
 )
 
 const (
 	APP_NAME				= "crawld"
 	VERSION         = "0.1"
-	PRODUCTS        = "crawld.products"
 )
 
 var (
@@ -26,14 +27,14 @@ var (
 	mem         	= flag.Bool("mem", false, "Utilize memory instead of Redis to store URLs")
 	query    			= flag.String("query", "", "Query parameter")
 	redisAddr   	= flag.String("redis", "", "Redis server")
-	rabbitMQAddr  = flag.String("rabbitmq", "", "Rabbitmq server")
+	//rabbitMQAddr  = flag.String("rabbitmq", "", "Rabbitmq server")
 	
 )
 
-var rediss 				redis.Conn
-var rabbits 			*amqp.Connection
-var productsch    *amqp.Channel
-var productsq     amqp.Queue
+var rediss 				*redis.Client
+//var rabbits 			*amqp.Connection
+//var productsch    *amqp.Channel
+//var productsq     amqp.Queue
 
 var config = CrawldConfig{}
 
@@ -45,13 +46,13 @@ func redisStr() string {
   return fmt.Sprintf("%s:%s", config.Redis.Host, config.Redis.Port)
 } // redisStr
 
-
+/*
 func rabbitMQStr() string {
   return fmt.Sprintf("amqp://%s:%s@%s:%s/%s", config.RabbitMQ.User,
 		config.RabbitMQ.Password, config.RabbitMQ.Host, config.RabbitMQ.Port,
 	  config.RabbitMQ.Meta["vhost"])
 } // rabbitMQStr
-
+*/
 	
 func normalizeConfig() {
 
@@ -70,6 +71,7 @@ func normalizeConfig() {
 
 	}
 
+	/*
 	if *rabbitMQAddr != "" {
 		
 		host, port, err := net.SplitHostPort(*rabbitMQAddr)
@@ -84,6 +86,7 @@ func normalizeConfig() {
 		}
 
 	}
+	*/
 
 	if *query != "" {
 		config.Queries = append(config.Queries, *query)
@@ -128,7 +131,7 @@ func appLog(msg string, fname string) {
 	log.Printf("[%s v%s] %s(): %s", APP_NAME, VERSION, fname, msg)
 } // appLog
 
-
+/*
 func initRabbitMQ() {
 
 	c, err := amqp.Dial(rabbitMQStr())
@@ -165,11 +168,20 @@ func initRabbitMQ() {
 	rabbits 		= c
 
 } // initRabbitMQ
-
+*/
 
 func initRedis() {
 
-	c, err := redis.Dial("tcp", redisStr())
+	c := redis.NewClient(&redis.Options{
+		Addr:					redisStr(),
+		DialTimeout: 	10 * time.Second,
+		ReadTimeout: 	30 * time.Second,
+		WriteTimeout:	30 * time.Second,
+		PoolSize:			10,
+		PoolTimeout:	30 * time.Second,
+	})
+
+	err := c.Ping().Err()
 
 	if err != nil {
 
@@ -192,11 +204,11 @@ func main() {
 	if *mem {
 
 		productStore 		= MemStore{
-			Entities: make(map[string]CrawldEntity),
+			Entities: make(map[string] map[string] interface{}),
 		}
 
 		imageStore			= MemStore{
-			Entities: make(map[string]CrawldEntity),
+			Entities: make(map[string] map[string] interface{}),
 		}
 
 	} else {
@@ -204,21 +216,24 @@ func main() {
 		appLog(fmt.Sprintf("Initiating connection to Redis at %s",
 		  redisStr()), "main")
 
+		initRedis()
+
+		defer rediss.Close()
+	
 		productStore 		= RedisStore{}
 		imageStore			= RedisStore{}
 
-		initRedis()
-	
-		defer rediss.Close()
 	
 	}
 
-	initRabbitMQ()
+	//initRabbitMQ()
 
-	defer rabbits.Close()
+	//defer rabbits.Close()
 
-	defer productsch.Close()
+	//defer productsch.Close()
 
+	go productParser()
+	
 	if len(config.Queries) == 0 {
 		log.Fatal("Please add a query for crawld with the -query option")
 	}
@@ -231,9 +246,15 @@ func main() {
 
 	}
 
-	//log.Println(m)
-	//log.Println(len(m))
-	//log.Println(*depth)
+	all, err := imageStore.GetAll()
+
+	if err != nil {
+		appLog(err.Error(), "main")
+	} else {
+		//log.Println(all)
+		log.Println(len(all))	
+	}
+	
 
 	/*
 	for _, k := range m {

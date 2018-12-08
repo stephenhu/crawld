@@ -13,6 +13,25 @@ const (
 
 const (
 
+	PRODUCTS        = "crawld.products"
+	IMAGES          = "crawld.images"
+	PRODUCTQ        = "queue.product"
+	IMAGEQ          = "queue.image"
+
+)
+
+const (
+
+	FIELD_CREATED				= "field.created"
+	FIELD_REFERRAL			= "field.referral"
+	FIELD_META					= "field.meta"
+	FIELD_RATING				= "field.rating"
+	FIELD_TAGS					= "field.tags"
+
+)
+
+const (
+
 	LNK_JDCOM 				= "item.jd.com"
 	LNK_JDCOM_CCC_X 	= "ccc-x.jd.com"
 
@@ -48,6 +67,14 @@ const (
 )
 
 
+const (
+	REDIS_LPUSH					= "LPUSH"
+	REDIS_BLPOP         = "BLPOP"
+	REDIS_HMSET         = "HMSET"
+	REDIS_HMGET         = "HMGET"
+)
+
+
 type ServiceConfig struct {
 	Host				string							`json:"host"`
 	Port				string							`json:"port"`
@@ -70,5 +97,5 @@ type CrawldEntity struct {
 	State         int                   `json:"state"`
 	Valid         bool                  `json:"valid"`
 	Tags          []string              `json:"tags"`
-	Rating        int                   `json:"rating"`
+	Rating        int                		`json:"rating"`
 }

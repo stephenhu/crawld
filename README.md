@@ -15,7 +15,7 @@ Image crawler
 1.  `go get github.com/PuerkitoBio/goquery`
 1.  `go get gocv.io/x/gocv`
 1.  `go get golang.org/x/net/html`
-1.  `go get github.com/gomodule/redigo/redis`
+1.  `go get github.com/go-redis/redis`
 
 `go build`
 

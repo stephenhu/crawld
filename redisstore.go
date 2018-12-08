@@ -1,25 +1,49 @@
 package main
 
 import (
-	//"errors"
+	"errors"
+	//"log"
+	//"time"
+
+	//"github.com/gomodule/redigo/redis"
+	//"github.com/go-redis/redis"
 )
 
 
-func (rs RedisStore) Put(k string, v CrawldEntity) (error) {
+func (rs RedisStore) Put(k string, v map[string]interface{}) (error) {
+
+	if k == "" {
+		return errors.New("Empty key not allowed")
+	}
+
+	err := rediss.HMSet(k, v).Err()
+
+	if err != nil {
+		return err
+	}
+
 	return nil
+
 } // Put
 
 
-func (rs RedisStore) Get(k string) (*CrawldEntity, error) {
+func (rs RedisStore) Get(k string) ([]interface{}, error) {
 
-	ce := CrawldEntity{}
+	r, err := rediss.HMGet(
+		k, FIELD_CREATED, FIELD_REFERRAL, FIELD_RATING).Result()
 
-	return &ce, nil
+	if err != nil {
+		return nil, err
+	} else {
+		
+		return r, nil
+
+	}
 
 } // Get
 
 
-func (rs RedisStore) GetAll() (map[string] CrawldEntity, error) {
+func (ms RedisStore) GetAll() (map[string]interface{}, error) {
 
 	return nil, nil
 
@@ -27,5 +51,18 @@ func (rs RedisStore) GetAll() (map[string] CrawldEntity, error) {
 
 
 func (rs RedisStore) Exists(k string) bool {
+
+	r, err := rediss.HGetAll(k).Result()
+
+	if err != nil {
+		appLog(err.Error(), "RedisStore.Exists")
+	} else {
+
+		if len(r) > 0 {
+			return true
+		}
+
+	}
 	return false
+
 } // Exists

@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	//"log"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
+	//"github.com/gomodule/redigo/redis"
+	//"github.com/go-redis/redis"
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html"
 )
@@ -59,12 +61,12 @@ func storeImageList(link string) {
 							}
 							*/
 
-							imageStore.Put(string(v),
-						    CrawldEntity{
-									Referral: l,
-									Created: time.Now(),
-									Valid: true,
-								})
+							
+							imageStore.Put(SanitizeURL(string(v)),map[string] interface{}{
+								"referral": l,
+								"created": time.Now(),
+							})
+
 
 						}
 
@@ -119,3 +121,17 @@ func getImageList(link string) {
 	}
 
 } // getImageList
+
+
+func productParser() {
+
+	r, err := rediss.BLPop(0, PRODUCTQ).Result()
+
+	if err != nil {
+		appLog(err.Error(), "productParser")
+	} else {
+		log.Println(r)
+		getImageList(r[1])
+	}
+
+} // productParser

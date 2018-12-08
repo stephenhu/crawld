@@ -2,17 +2,13 @@ package main
 
 import (
 	"errors"
-	"log"
+	//"log"
 	//"strings"
 	//"time"
 )
 
 
-func (ms MemStore) Put(k string, v CrawldEntity) (error) {
-
-	log.Println(k)
-	log.Println(v)
-	log.Println(len(ms.Entities))
+func (ms MemStore) Put(k string, v map[string]interface{}) (error) {
 
 	ms.Entities[k] = v
 
@@ -21,12 +17,12 @@ func (ms MemStore) Put(k string, v CrawldEntity) (error) {
 } // Put
 
 
-func (ms MemStore) Get(k string) (*CrawldEntity, error) {
+func (ms MemStore) Get(k string) ([] interface{}, error) {
 
-	v, ok := ms.Entities[SanitizeURL(k)]
+	_, ok := ms.Entities[SanitizeURL(k)]
 
 	if ok {
-		return &v, nil
+		return nil, nil
 	} else {
 		return nil, errors.New("URL not found.")
 	}
@@ -34,7 +30,7 @@ func (ms MemStore) Get(k string) (*CrawldEntity, error) {
 } // Get
 
 
-func (ms MemStore) GetAll() (map[string] CrawldEntity, error) {
+func (ms MemStore) GetAll() (map[string] interface{}, error) {
 
 	return nil, nil
 

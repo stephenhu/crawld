@@ -30,16 +30,23 @@ func crawler(link string) {
 			doc.Find(HTML_A).Each(func(index int, item *goquery.Selection) {
 
 				l, _ := item.Attr(ATTR_HREF)
-				
+
 				if strings.Contains(l, LNK_JDCOM) || strings.Contains(l, LNK_JDCOM_CCC_X) {
 					
-					s := strings.TrimSuffix(lnk, "#comment")
+					s := strings.TrimSuffix(l, "#comment")
+
+					s = SanitizeURL(s)
 					
-					productStore.Put(s,
-					  CrawldEntity{
-							Created: time.Now(),
-							State: STATE_OPEN,
+					if !productStore.Exists(s) {
+
+						productStore.Put(s, map[string] interface{}{
+							"created": time.Now(),
 						})
+	
+						rediss.LPush(PRODUCTQ, s)
+
+					}
+
 					/*
 					_, ok := m[s]
 
