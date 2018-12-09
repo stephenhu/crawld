@@ -13,9 +13,7 @@ Image crawler
 
 ## Setup
 
-1.  `go get github.com/streadway/amqp`
 1.  `go get github.com/PuerkitoBio/goquery`
-1.  `go get gocv.io/x/gocv`
 1.  `go get golang.org/x/net/html`
 1.  `go get github.com/go-redis/redis`
 
