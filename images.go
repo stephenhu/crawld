@@ -2,7 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	//"log"
+	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -13,9 +14,34 @@ import (
 )
 
 
-func storeImageList(link string) {
+func job(imageUrl string, originUrl string, title string) string {
+	return fmt.Sprintf("%s%s%s%s%s", imageUrl, DELIMITER, originUrl,
+		DELIMITER, title)
+} // job
+
+
+func getTitle(doc *goquery.Document) string {
+
+	title := ""
+
+	doc.Find(HTML_TITLE).Each(func(index int, item *goquery.Selection) {
+
+		t := item.Text()
+
+		title = t
+
+	})
+
+	return title
+
+} // getTitle
+
+
+func storeImageList(link string, doc *goquery.Document, originUrl string) {
 
 	l := SanitizeURL(link)
+
+	title := getTitle(doc)
 
 	res, err := http.Get(l)
 
@@ -44,7 +70,7 @@ func storeImageList(link string) {
 				} else {
 
 					name, _ := doc.TagName()
-					 
+
 					if string(name) == HTML_IMG {
 
 						k, v, _ := doc.TagAttr()
@@ -61,7 +87,12 @@ func storeImageList(link string) {
 
 								if r > 0 {
 
-									err := rediss.LPush(IMAGESQ, cleanUrl).Err()
+									jj := job(cleanUrl, originUrl, title)
+
+									log.Println(jj)
+
+									err := rediss.LPush(IMAGESQ,
+										jj).Err()
 
 									if err != nil {
 										appLogError(err, "storeImageList")
@@ -114,7 +145,7 @@ func getImageList(link string) {
 
 					match := re.FindString(t)
 
-					storeImageList(match)
+					storeImageList(match, doc, link)
 
 				}
 

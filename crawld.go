@@ -50,6 +50,7 @@ const (
 	HTML_A          = "a"
 	HTML_IMG        = "img"
 	HTML_SCRIPT     = "script"
+	HTML_TITLE      = "title"
 
 )
 
@@ -67,7 +68,6 @@ const (
 
 )
 
-
 const (
 	REDIS_LPUSH					= "LPUSH"
 	REDIS_BLPOP         = "BLPOP"
@@ -75,6 +75,9 @@ const (
 	REDIS_HMGET         = "HMGET"
 )
 
+const (
+	DELIMITER						= "..."
+)
 
 type ServiceConfig struct {
 	Host				string							`json:"host"`
